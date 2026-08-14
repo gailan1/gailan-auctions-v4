@@ -13,4 +13,5 @@ async function start(){\n if(!window.SUPABASE_URL||window.SUPABASE_URL.includes(
       headers: { "content-type": "text/html; charset=UTF-8", "cache-control": "no-store" }
     });
   }
-};
+};btn.href = "https://wa.me/" + phone + "?text=" + encodeURIComponent(CONTACT_TEXT);
+}
