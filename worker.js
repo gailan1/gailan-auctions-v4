@@ -23,7 +23,7 @@ th,td{padding:10px;border-bottom:1px solid #eee;font-size:13px;text-align:right}
 </style></head><body>
 <div id="login" class="login"><div class="box">
 <h1 style="text-align:center">🚗 Gailan Auctions</h1><p style="text-align:center;color:#6b7280">تسجيل الدخول</p>
-<form id="loginForm"><label>البريد الإلكتروني</label><input id="email" type="email" required>
+<form id="loginForm"><label>اسم المستخدم</label><input id="username" autocomplete="username" required>
 <label>كلمة المرور</label><input id="password" type="password" required>
 <button class="btn primary" style="width:100%;margin-top:14px">دخول</button><p id="loginMsg" class="msg"></p></form>
 </div></div>
@@ -49,6 +49,7 @@ th,td{padding:10px;border-bottom:1px solid #eee;font-size:13px;text-align:right}
 <div><label>أخرى</label><input name="other" type="number" step=".01"></div><div><label>سعر البيع</label><input name="sale" type="number" step=".01"></div><div><label>تاريخ الشراء</label><input name="purchase_date" type="date"></div>
 <div><label>ملاحظات</label><textarea name="notes"></textarea></div><div><button class="btn primary">حفظ</button><button type="button" id="cancelBtn" class="btn gray">إلغاء</button></div>
 </form></div></section></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://flquvvfkfldtectpnzbt.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_QTTOdtPsvIPQBHW5w7XlEQ_hchFU3gc";
@@ -69,7 +70,13 @@ async function open(s){session=s;const r=await sb.from("profiles").select("*").e
 profile=r.data;if(profile.active===false){await sb.auth.signOut();alert("الحساب متوقف");return}
 $("login").classList.add("hidden");$("app").classList.remove("hidden");$("who").textContent=profile.username||s.user.email||"";
 $("addTab").classList.toggle("hidden",profile.role!=="admin");await loadCars()}
-$("loginForm").onsubmit=async e=>{e.preventDefault();$("loginMsg").textContent="";const r=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(r.error)$("loginMsg").textContent="البريد الإلكتروني أو كلمة المرور غير صحيحة"};
+$("loginForm").onsubmit=async e=>{e.preventDefault();$("loginMsg").textContent="جاري الدخول...";
+const username=$("username").value.trim();const password=$("password").value;
+if(!sb){$("loginMsg").textContent="تعذر تحميل النظام.";return}
+const lr=await sb.rpc("get_login_email",{p_username:username});
+if(lr.error||!lr.data){$("loginMsg").textContent="اسم المستخدم غير موجود أو غير فعال";return}
+const r=await sb.auth.signInWithPassword({email:lr.data,password});
+if(r.error)$("loginMsg").textContent="اسم المستخدم أو كلمة المرور غير صحيحة";};
 $("logoutBtn").onclick=async()=>{await sb.auth.signOut();location.reload()};
 async function loadCars(){let q=sb.from("cars").select("*").order("id",{ascending:false});if(profile.role!=="admin")q=q.eq("user_id",session.user.id);const r=await q;if(r.error){alert(r.error.message);return}cars=r.data||[];render()}
 function render(){const term=($("search").value||"").toLowerCase();const list=cars.filter(c=>JSON.stringify(c).toLowerCase().includes(term));
