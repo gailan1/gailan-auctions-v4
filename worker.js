@@ -20,17 +20,20 @@ label{font-size:13px;font-weight:bold;display:block;margin:8px 0 5px}
 .tabs{display:flex;gap:7px;margin:16px 0;flex-wrap:wrap}.tab.active{background:#2563eb;color:#fff}
 .panel{display:none}.panel.active{display:block}.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .table{overflow:auto;margin-top:12px;background:#fff;border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1050px}
-th,td{padding:10px;border-bottom:1px solid #eee;font-size:13px;text-align:right}.profit{color:#087f5b;font-weight:bold}.loss{color:#c92a2a;font-weight:bold}.msg{color:#c92a2a;white-space:pre-wrap}
-.debug{margin-top:12px;padding:10px;background:#f3f4f6;border-radius:9px;font-size:12px;color:#374151;display:none}
+th,td{padding:10px;border-bottom:1px solid #eee;font-size:13px;text-align:right}.profit{color:#087f5b;font-weight:bold}.loss{color:#c92a2a;font-weight:bold}
+.msg{color:#c92a2a;white-space:pre-wrap}.debug{margin-top:12px;padding:10px;background:#f3f4f6;border-radius:9px;font-size:12px;color:#374151;white-space:pre-wrap}
 @media(max-width:750px){.grid{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr 1fr}}
 @media(max-width:500px){.grid,.formgrid{grid-template-columns:1fr}}
 </style></head><body>
 <div id="login" class="login"><div class="box">
 <h1 style="text-align:center">🚗 Gailan Auctions</h1><p style="text-align:center;color:#6b7280">تسجيل الدخول</p>
-<form id="loginForm"><label>اسم المستخدم</label><input id="username" autocomplete="username" required>
-<label>كلمة المرور</label><input id="password" type="password" required>
-<button class="btn primary" style="width:100%;margin-top:14px">دخول</button><p id="loginMsg" class="msg"></p>
-<div id="debug" class="debug"></div></form></div></div>
+<form id="loginForm">
+<label>اسم المستخدم</label><input id="username" autocomplete="username" required>
+<label>كلمة المرور</label><input id="password" type="password" autocomplete="current-password" required>
+<button id="loginBtn" class="btn primary" style="width:100%;margin-top:14px">دخول</button>
+<p id="loginMsg" class="msg"></p><div id="debug" class="debug hidden"></div>
+</form></div></div>
+
 <div id="app" class="hidden"><header><div class="bar"><b>🚗 Gailan Auctions V4</b><div>
 <span id="who"></span> <a id="contactBtn" class="btn primary" target="_blank" rel="noopener">📞 تواصل معي</a>
 <button id="logoutBtn" class="btn gray">خروج</button></div></div></header>
@@ -40,8 +43,7 @@ th,td{padding:10px;border-bottom:1px solid #eee;font-size:13px;text-align:right}
 <div class="tabs"><button class="btn tab active" data-panel="cars">السيارات</button>
 <button id="addTab" class="btn tab hidden" data-panel="add">+ إضافة سيارة</button></div>
 <section id="cars" class="panel active"><input id="search" placeholder="بحث بالسيارة أو VIN أو رقم المزاد...">
-<div class="table"><table><thead><tr><th>السيارة</th><th>VIN</th><th>المزاد</th><th>الشراء</th><th>المصاريف</th><th>الإجمالي</th><th>البيع</th><th>الربح</th><th></th></tr></thead>
-<tbody id="tbody"></tbody></table></div></section>
+<div class="table"><table><thead><tr><th>السيارة</th><th>VIN</th><th>المزاد</th><th>الشراء</th><th>المصاريف</th><th>الإجمالي</th><th>البيع</th><th>الربح</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div></section>
 <section id="add" class="panel"><div class="card" style="padding:18px"><h3 id="formTitle">إضافة سيارة</h3>
 <form id="carForm" class="formgrid">
 <div><label>الماركة</label><input name="make" required></div><div><label>الموديل</label><input name="model" required></div><div><label>السنة</label><input name="year" type="number"></div>
@@ -52,6 +54,7 @@ th,td{padding:10px;border-bottom:1px solid #eee;font-size:13px;text-align:right}
 <div><label>أخرى</label><input name="other" type="number" step=".01"></div><div><label>سعر البيع</label><input name="sale" type="number" step=".01"></div><div><label>تاريخ الشراء</label><input name="purchase_date" type="date"></div>
 <div><label>ملاحظات</label><textarea name="notes"></textarea></div><div><button class="btn primary">حفظ</button><button type="button" id="cancelBtn" class="btn gray">إلغاء</button></div>
 </form></div></section></div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://flquvvfkfldtectpnzbt.supabase.co";
@@ -64,62 +67,69 @@ const $=id=>document.getElementById(id);
 const money=n=>"$"+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:2});
 const total=c=>fields.reduce((s,k)=>s+Number(c[k]||0),0);
 const esc=v=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
-function debug(msg){$("debug").style.display="block";$("debug").textContent=msg}
+function debug(t){$("debug").classList.remove("hidden");$("debug").textContent=t}
 function showPanel(id){document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));$(id).classList.add("active");const b=document.querySelector('[data-panel="'+id+'"]');if(b)b.classList.add("active")}
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>showPanel(b.dataset.panel));
 
 async function init(){
  $("contactBtn").href="https://wa.me/"+CONTACT_PHONE+"?text="+encodeURIComponent(CONTACT_TEXT);
- if(!window.supabase){$("loginMsg").textContent="تعذر تحميل مكتبة Supabase.";return}
- sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+ if(!window.supabase){$("loginMsg").textContent="تعذر تحميل مكتبة Supabase";return}
+ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
  const r=await sb.auth.getSession();
  if(r.error){$("loginMsg").textContent="خطأ في الجلسة: "+r.error.message;return}
- if(r.data.session)await open(r.data.session);
+ if(r.data&&r.data.session){await openApp(r.data.session)}
+ sb.auth.onAuthStateChange((event,newSession)=>{
+   if(event==="SIGNED_IN"&&newSession) openApp(newSession);
+   if(event==="SIGNED_OUT"){session=null;profile=null;$("app").classList.add("hidden");$("login").classList.remove("hidden")}
+ });
 }
 
-async function open(s){
+async function openApp(s){
+ if(!s||!s.user){$("loginMsg").textContent="الجلسة غير صالحة";return}
  session=s;
- $("loginMsg").textContent="جارٍ تحميل بيانات المستخدم...";
- debug("تم تسجيل الدخول بنجاح. User ID: "+s.user.id);
+ $("loginMsg").textContent="تم تسجيل الدخول، جاري تحميل البيانات...";
+ debug("AUTH OK\\nUser ID: "+s.user.id+"\\nEmail: "+(s.user.email||""));
  try{
    const r=await sb.from("profiles").select("id,username,role,active").eq("id",s.user.id);
-   debug("نتيجة profiles: "+(r.error?r.error.message:"OK")+"\nعدد السجلات: "+(r.data?r.data.length:0));
-   if(r.error){$("loginMsg").textContent="خطأ عند قراءة profiles: "+r.error.message;return}
-   if(!Array.isArray(r.data)||r.data.length===0){$("loginMsg").textContent="لم يتم العثور على سجل المستخدم في profiles.";return}
+   debug("AUTH OK\\nPROFILE QUERY: "+(r.error?r.error.message:"OK")+"\\nRows: "+(r.data?r.data.length:0));
+   if(r.error){$("loginMsg").textContent="خطأ في بيانات المستخدم: "+r.error.message;return}
+   if(!r.data||r.data.length<1){$("loginMsg").textContent="لا يوجد ملف profile لهذا الحساب";return}
    profile=r.data[0];
-   if(profile.active===false){await sb.auth.signOut();$("loginMsg").textContent="الحساب متوقف.";return}
-   $("login").classList.add("hidden");$("app").classList.remove("hidden");
+   if(profile.active===false){$("loginMsg").textContent="الحساب غير فعال";await sb.auth.signOut();return}
+   $("login").classList.add("hidden");
+   $("app").classList.remove("hidden");
    $("who").textContent=profile.username||s.user.email||"";
    $("addTab").classList.toggle("hidden",profile.role!=="admin");
+   $("loginMsg").textContent="";
    await loadCars();
- }catch(err){
-   $("loginMsg").textContent="خطأ غير متوقع: "+(err?.message||String(err));
-   debug(err?.stack||String(err));
+ }catch(e){
+   $("loginMsg").textContent="تعذر فتح الحساب: "+(e.message||e);
+   debug("OPEN ERROR\\n"+(e.stack||e));
  }
 }
 
 $("loginForm").onsubmit=async e=>{
- e.preventDefault();$("loginMsg").textContent="جاري الدخول...";$("debug").style.display="none";
- const username=$("username").value.trim(),password=$("password").value;
- if(!sb){$("loginMsg").textContent="تعذر تحميل النظام.";return}
+ e.preventDefault();
+ const btn=$("loginBtn");btn.disabled=true;$("loginMsg").textContent="جاري الدخول...";$("debug").classList.add("hidden");
  try{
+   const username=$("username").value.trim(),password=$("password").value;
    const lr=await sb.rpc("get_login_email",{p_username:username});
-   if(lr.error){$("loginMsg").textContent="خطأ في البحث عن اسم المستخدم: "+lr.error.message;debug(JSON.stringify(lr.error,null,2));return}
-   if(!lr.data){$("loginMsg").textContent="اسم المستخدم غير موجود أو غير فعال";return}
-   const r=await sb.auth.signInWithPassword({email:lr.data,password});
+   if(lr.error){$("loginMsg").textContent="خطأ في البحث عن المستخدم: "+lr.error.message;debug(JSON.stringify(lr.error,null,2));return}
+   const email=typeof lr.data==="string"?lr.data:(Array.isArray(lr.data)?lr.data[0]?.email:lr.data?.email);
+   if(!email){$("loginMsg").textContent="لم يتم العثور على البريد المرتبط باسم المستخدم";return}
+   const r=await sb.auth.signInWithPassword({email,password});
    if(r.error){$("loginMsg").textContent="اسم المستخدم أو كلمة المرور غير صحيحة";debug(r.error.message);return}
-   if(r.data&&r.data.session){$("loginMsg").textContent="تم الدخول...";await open(r.data.session)}
-   else $("loginMsg").textContent="تعذر إنشاء جلسة الدخول";
- }catch(err){$("loginMsg").textContent="خطأ غير متوقع أثناء الدخول: "+(err?.message||String(err));debug(err?.stack||String(err))}
+   if(!r.data?.session){$("loginMsg").textContent="تمت المصادقة لكن لم يتم إنشاء جلسة";return}
+   await openApp(r.data.session);
+ }catch(e){
+   $("loginMsg").textContent="خطأ أثناء تسجيل الدخول: "+(e.message||e);
+   debug(e.stack||String(e));
+ }finally{btn.disabled=false}
 };
+
 $("logoutBtn").onclick=async()=>{await sb.auth.signOut();location.reload()};
 async function loadCars(){let q=sb.from("cars").select("*").order("id",{ascending:false});if(profile.role!=="admin")q=q.eq("user_id",session.user.id);const r=await q;if(r.error){alert(r.error.message);return}cars=r.data||[];render()}
-function render(){
- const term=($("search").value||"").toLowerCase(),list=cars.filter(c=>JSON.stringify(c).toLowerCase().includes(term));
- $("tbody").innerHTML=list.map(c=>{const t=total(c),p=Number(c.sale||0)-t,a=profile.role==="admin"?'<button class="btn" onclick="editCar('+Number(c.id)+')">تعديل</button> <button class="btn danger" onclick="deleteCar('+Number(c.id)+')">حذف</button>':"";return "<tr><td><b>"+esc(c.make)+" "+esc(c.model)+"</b><br>"+esc(c.year)+"</td><td>"+esc(c.vin||"-")+"</td><td>"+esc(c.auction||"-")+"<br>"+esc(c.lot||"")+"</td><td>"+money(c.purchase)+"</td><td>"+money(t-Number(c.purchase||0))+"</td><td>"+money(t)+"</td><td>"+money(c.sale)+"</td><td class='"+(p>=0?"profit":"loss")+"'>"+money(p)+"</td><td>"+a+"</td></tr>"}).join("")||'<tr><td colspan="9" style="text-align:center">لا توجد سيارات</td></tr>';
- const tc=cars.reduce((s,c)=>s+total(c),0),ts=cars.reduce((s,c)=>s+Number(c.sale||0),0);
- $("count").textContent=cars.length;$("cost").textContent=money(tc);$("sales").textContent=money(ts);$("profit").textContent=money(ts-tc)
-}
+function render(){const term=($("search").value||"").toLowerCase();const list=cars.filter(c=>JSON.stringify(c).toLowerCase().includes(term));$("tbody").innerHTML=list.map(c=>{const t=total(c),p=Number(c.sale||0)-t;const a=profile.role==="admin"?'<button class="btn" onclick="editCar('+Number(c.id)+')">تعديل</button> <button class="btn danger" onclick="deleteCar('+Number(c.id)+')">حذف</button>':"";return "<tr><td><b>"+esc(c.make)+" "+esc(c.model)+"</b><br>"+esc(c.year)+"</td><td>"+esc(c.vin||"-")+"</td><td>"+esc(c.auction||"-")+"<br>"+esc(c.lot||"")+"</td><td>"+money(c.purchase)+"</td><td>"+money(t-Number(c.purchase||0))+"</td><td>"+money(t)+"</td><td>"+money(c.sale)+"</td><td class='"+(p>=0?"profit":"loss")+"'>"+money(p)+"</td><td>"+a+"</td></tr>"}).join("")||'<tr><td colspan="9" style="text-align:center">لا توجد سيارات</td></tr>';const tc=cars.reduce((s,c)=>s+total(c),0),ts=cars.reduce((s,c)=>s+Number(c.sale||0),0);$("count").textContent=cars.length;$("cost").textContent=money(tc);$("sales").textContent=money(ts);$("profit").textContent=money(ts-tc)}
 $("search").oninput=render;
 $("carForm").onsubmit=async e=>{e.preventDefault();if(profile.role!=="admin"){alert("ليس لديك صلاحية");return}const d=Object.fromEntries(new FormData(e.target));fields.forEach(k=>d[k]=Number(d[k]||0));const r=editId?await sb.from("cars").update(d).eq("id",editId):await sb.from("cars").insert({...d,user_id:session.user.id});if(r.error)alert(r.error.message);else{resetForm();await loadCars();showPanel("cars")}};
 function resetForm(){editId=null;$("formTitle").textContent="إضافة سيارة";$("carForm").reset()}
